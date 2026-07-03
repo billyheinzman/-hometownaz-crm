@@ -1913,20 +1913,26 @@ function buildMilestones(tx){
   if(!a)return [];
   const insp=Number(tx.inspDays||10);
   const ms=[
-    {key:'accept', name:'Contract Accepted', date:a, note:'Day 0 — contract binding'},
-    {key:'emd', name:'Earnest Money Due', date:addDays(a,1), note:'Within 1 day of acceptance'},
-    {key:'inspStart', name:'Inspection Period Begins', date:a, note:'Buyer due diligence opens'},
-    {key:'inspEnd', name:'Inspection Period Ends (BINSR due)', date:addDays(a,insp), note:insp+'-day inspection deadline'},
-    {key:'appraisal', name:'Appraisal Ordered (target)', date:addDays(a,7), note:'Lender appraisal window'},
-    {key:'loanContingency', name:'Loan Contingency / Approval', date:addDays(a,21), note:'Financing approval target'},
-    {key:'walkthrough', name:'Final Walkthrough', date:addDays(tx.coeDate,-2), note:'2 days before close'},
-    {key:'coe', name:'Close of Escrow (COE)', date:tx.coeDate, note:'Recording & funding'}
+    {key:'accept', msKey:'contract', name:'Contract Accepted', date:a, note:'Day 0 — contract binding'},
+    {key:'emd', msKey:'emd', name:'Earnest Money Due', date:addDays(a,1), note:'Within 1 day of acceptance'},
+    {key:'inspStart', msKey:'inspection', name:'Inspection Period Begins', date:a, note:'Buyer due diligence opens'},
+    {key:'inspEnd', msKey:'binsr', name:'Inspection Period Ends (BINSR due)', date:addDays(a,insp), note:insp+'-day inspection deadline'},
+    {key:'appraisal', msKey:'appraisal', name:'Appraisal Ordered (target)', date:addDays(a,7), note:'Lender appraisal window'},
+    {key:'loanContingency', msKey:'loan', name:'Loan Contingency / Approval', date:addDays(a,21), note:'Financing approval target'},
+    {key:'walkthrough', msKey:'walkthrough', name:'Final Walkthrough', date:addDays(tx.coeDate,-2), note:'2 days before close'},
+    {key:'coe', msKey:'coe', name:'Close of Escrow (COE)', date:tx.coeDate, note:'Recording & funding'}
   ];
   // apply any manual overrides stored on the tx
   if(tx.overrides){
     ms.forEach(m=>{ if(tx.overrides[m.key]) m.date=tx.overrides[m.key]; });
   }
-  return ms.filter(m=>m.date).sort((a,b)=>a.date.localeCompare(b.date));
+  // Hide deadlines whose milestone is already done or marked N/A (e.g. appraisal/loan on a cash deal,
+  // or BINSR once the inspection period is resolved). Keeps the timeline focused on what's still live.
+  const mst = tx.milestones || {};
+  return ms
+    .filter(m=>m.date)
+    .filter(m=>{ const st = m.msKey ? mst[m.msKey] : null; return st!=='done' && st!=='na'; })
+    .sort((a,b)=>a.date.localeCompare(b.date));
 }
 
 // progress 0..1 across the standard stages
